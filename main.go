@@ -11,10 +11,7 @@ import (
 	"time"
 )
 
-var (
-	splitByWeek = regexp.MustCompile(`(周[一二三四五六日])([\w\W]{0,}?)<\/div>`)
-	spiltAnime  = regexp.MustCompile(`<strong>[\w\W]{0,}?<em[^>]*>([0-9:]{1,}?)<\/em>[\w\W]{0,}?<u>(.{1,}?)<\/u><\/strong>`)
-)
+var rAnime = regexp.MustCompile(`<strong>[\w\W]{0,}?<em acgdb-timestamp="([0-9]+)">[\w\W]{0,}?<\/em><u>(.{1,}?)<\/u><\/strong>`)
 
 func getQuarter() string {
 	now := time.Now()
@@ -33,11 +30,11 @@ func getQuarter() string {
 	return result
 }
 
-type dayList [][2]string
+type sortAnime [][]string
 
-func (l dayList) Len() int           { return len(l) }
-func (l dayList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
-func (l dayList) Less(i, j int) bool { return l[i][0] < l[j][0] }
+func (l sortAnime) Len() int           { return len(l) }
+func (l sortAnime) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l sortAnime) Less(i, j int) bool { return l[i][1] < l[j][1] }
 
 func getData() (*[7][][2]string, error) {
 	// 1, 4, 7, 10
@@ -53,34 +50,14 @@ func getData() (*[7][][2]string, error) {
 	}
 	s := string(b)
 	var result [7][][2]string
-	week := splitByWeek.FindAllStringSubmatch(s, -1)
-	for _, v := range week {
-		anime := spiltAnime.FindAllStringSubmatch(v[2], -1)
-		var i int
-		switch v[1] {
-		case "周日":
-			i = 0
-		case "周一":
-			i = 1
-		case "周二":
-			i = 2
-		case "周三":
-			i = 3
-		case "周四":
-			i = 4
-		case "周五":
-			i = 5
-		case "周六":
-			i = 6
-		}
+	anime := rAnime.FindAllStringSubmatch(s, -1)
 
-		var r [][2]string
-		for _, vv := range anime {
-			time, name := vv[1], vv[2]
-			r = append(r, [2]string{time, name})
-		}
-		sort.Sort(dayList(r))
-		result[i] = r
+	sort.Sort(sortAnime(anime))
+	for _, v := range anime {
+		millisecond, _ := strconv.ParseInt(v[1], 10, 64)
+		t := time.Unix(millisecond/1000, 0).In(time.FixedZone("Asia/Beijing", 8*60*60))
+		w := int(t.Weekday())
+		result[w] = append(result[w], [2]string{t.Format("15:04"), v[2]})
 	}
 	return &result, nil
 }
