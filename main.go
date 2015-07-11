@@ -30,11 +30,11 @@ func getQuarter() string {
 	return result
 }
 
-type sortAnime [][]string
+type sortAnimeList [][2]string
 
-func (l sortAnime) Len() int           { return len(l) }
-func (l sortAnime) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
-func (l sortAnime) Less(i, j int) bool { return l[i][1] < l[j][1] }
+func (l sortAnimeList) Len() int           { return len(l) }
+func (l sortAnimeList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l sortAnimeList) Less(i, j int) bool { return l[i][0] < l[j][0] }
 
 func getData() (*[7][][2]string, error) {
 	// 1, 4, 7, 10
@@ -52,12 +52,15 @@ func getData() (*[7][][2]string, error) {
 	var result [7][][2]string
 	anime := rAnime.FindAllStringSubmatch(s, -1)
 
-	sort.Sort(sortAnime(anime))
 	for _, v := range anime {
 		millisecond, _ := strconv.ParseInt(v[1], 10, 64)
 		t := time.Unix(millisecond/1000, 0).In(time.FixedZone("Asia/Beijing", 8*60*60))
 		w := int(t.Weekday())
 		result[w] = append(result[w], [2]string{t.Format("15:04"), v[2]})
+	}
+	// 排序
+	for _, v := range result {
+		sort.Sort(sortAnimeList(v))
 	}
 	return &result, nil
 }
